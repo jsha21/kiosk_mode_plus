@@ -5,6 +5,16 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <application>
+        <activity-alias
+            android:name=".LauncherActivity"
+            android:targetActivity=".MainActivity"
+            android:exported="true">
+            <intent-filter android:priority="1000">
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.HOME" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity-alias>        
         <!-- 자동 부팅 리시버 -->
         <receiver
             android:name=".BootReceiver"
