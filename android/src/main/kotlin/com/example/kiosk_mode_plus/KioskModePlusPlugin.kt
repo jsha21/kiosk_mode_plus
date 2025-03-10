@@ -42,6 +42,10 @@ class KioskModePlusPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
             if (dpm.isDeviceOwnerApp(packageName)) {
               // 여기서 앱을 LockTask 화이트리스트에 추가
               dpm.setLockTaskPackages(adminComponent, arrayOf(packageName))
+
+              // 시스템 UI 제한 추가
+              dpm.setLockTaskFeatures(adminComponent, 
+                DevicePolicyManager.LOCK_TASK_FEATURE_NONE) // 모든 기능 제한
               
               // 키오스크 모드 시작
               it.startLockTask()
