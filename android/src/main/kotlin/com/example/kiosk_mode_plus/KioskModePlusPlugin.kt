@@ -93,44 +93,35 @@ class KioskModePlusPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
     }
     "setAsDefaultLauncher" -> {
       try {
-        // 런처 선택 다이얼로그를 표시하는 방법
         val packageManager = context.packageManager
-        val componentName = ComponentName(context.packageName, "${context.packageName}.MainActivity")
+        val currentPackageName = context.packageName
         
-        // 컴포넌트 활성화
-        packageManager.setComponentEnabledSetting(
-          componentName,
-          PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
-          PackageManager.DONT_KILL_APP
-        )
-        
-        // 홈 선택 다이얼로그 표시
+        // 현재 기본 홈 앱 확인
         val intent = Intent(Intent.ACTION_MAIN)
         intent.addCategory(Intent.CATEGORY_HOME)
         intent.addCategory(Intent.CATEGORY_DEFAULT)
-        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
         
-        // 디바이스 오너인 경우 직접 기본값 설정 시도
-        val dpm = context.getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
-        val adminComponent = ComponentName(context.packageName, "com.example.kiosk_mode_plus.AdminReceiver")
+        val resolveInfo = packageManager.resolveActivity(intent, PackageManager.MATCH_DEFAULT_ONLY)
+        val currentDefaultLauncher = resolveInfo?.activityInfo?.packageName
         
-        if (dpm.isDeviceOwnerApp(context.packageName)) {
-          // 기존 런처 비활성화 시도
-          val defaultLauncher = "com.android.launcher3" // 기본 런처 패키지명
-          try {
-            dpm.setApplicationHidden(adminComponent, defaultLauncher, true)
-          } catch (e: Exception) {
-            // 비활성화 실패해도 계속 진행
-          }
+        // 이미 현재 앱이 기본 홈 앱인 경우 아무 작업도 하지 않음
+        if (currentDefaultLauncher == currentPackageName) {
+          result.success(true)
+          return@setMethodCallHandler
         }
         
         // 홈 선택 다이얼로그 표시
-        activity?.startActivity(intent) ?: context.startActivity(intent)
+        val selectIntent = Intent(Intent.ACTION_MAIN)
+        selectIntent.addCategory(Intent.CATEGORY_HOME)
+        selectIntent.addCategory(Intent.CATEGORY_DEFAULT)
+        selectIntent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        
+        activity?.startActivity(selectIntent) ?: context.startActivity(selectIntent)
         result.success(true)
       } catch (e: Exception) {
         result.error("SET_LAUNCHER_ERROR", "기본 런처 설정 실패: ${e.message}", null)
       }
-    }    
+} 
     "clearDefaultLauncher" -> {
       try {
         // 앱이 디바이스 오너인 경우
