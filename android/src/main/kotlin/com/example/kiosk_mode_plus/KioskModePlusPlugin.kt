@@ -5,7 +5,11 @@ import android.app.ActivityManager
 import android.app.admin.DevicePolicyManager
 import android.content.ComponentName
 import android.content.Context
+import android.content.Intent
 import android.content.SharedPreferences
+import android.content.pm.PackageManager
+import android.os.UserManager
+import android.util.Log
 import androidx.annotation.NonNull
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.embedding.engine.plugins.activity.ActivityAware
@@ -16,7 +20,7 @@ import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
 
 class KioskModePlusPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
-  private lateinit var channel : MethodChannel
+  private lateinit var channel: MethodChannel
   private lateinit var context: Context
   private var activity: Activity? = null
   private lateinit var sharedPreferences: SharedPreferences
@@ -42,10 +46,6 @@ class KioskModePlusPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
             if (dpm.isDeviceOwnerApp(packageName)) {
               // 여기서 앱을 LockTask 화이트리스트에 추가
               dpm.setLockTaskPackages(adminComponent, arrayOf(packageName))
-
-              // 시스템 UI 제한 추가
-              dpm.setLockTaskFeatures(adminComponent, 
-                DevicePolicyManager.LOCK_TASK_FEATURE_NONE) // 모든 기능 제한
               
               // 키오스크 모드 시작
               it.startLockTask()
@@ -61,16 +61,19 @@ class KioskModePlusPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
           }
         } ?: result.error("ACTIVITY_NULL", "Activity is null", null)
       }
+      
       "stopKioskMode" -> {
         activity?.let {
           it.stopLockTask()
           result.success(true)
         } ?: result.error("ACTIVITY_NULL", "Activity is null", null)
       }
+      
       "isInKioskMode" -> {
         val am = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
         result.success(am.isInLockTaskMode)
       }
+      
       "setupLockTaskPackages" -> {
         try {
           val dpm = context.getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
@@ -87,58 +90,90 @@ class KioskModePlusPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
           result.error("SETUP_ERROR", "LockTask 설정 실패: ${e.message}", null)
         }
       }
+      
+      "setAsDefaultLauncher" -> {
+        try {
+          val forceDialog = call.argument<Boolean>("forceDialog") ?: false
+          val packageManager = context.packageManager
+          val currentPackageName = context.packageName
+          
+          // 현재 기본 홈 앱 확인
+          val intent = Intent(Intent.ACTION_MAIN)
+          intent.addCategory(Intent.CATEGORY_HOME)
+          intent.addCategory(Intent.CATEGORY_DEFAULT)
+          
+          val resolveInfo = packageManager.resolveActivity(intent, PackageManager.MATCH_DEFAULT_ONLY)
+          val currentDefaultLauncher = resolveInfo?.activityInfo?.packageName
+          
+          // 이미 현재 앱이 기본 홈 앱이고 강제 다이얼로그가 아닌 경우 종료
+          if (currentDefaultLauncher == currentPackageName && !forceDialog) {
+            result.success(true)
+            return
+          }
+          
+          // 홈 선택 다이얼로그 표시
+          val selectIntent = Intent(Intent.ACTION_MAIN)
+          selectIntent.addCategory(Intent.CATEGORY_HOME)
+          selectIntent.addCategory(Intent.CATEGORY_DEFAULT)
+          selectIntent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+          
+          activity?.startActivity(selectIntent) ?: context.startActivity(selectIntent)
+          result.success(true)
+        } catch (e: Exception) {
+          result.error("SET_LAUNCHER_ERROR", "기본 런처 설정 실패: ${e.message}", null)
+        }
+      }
+      
+      "clearDefaultLauncher" -> {
+        try {
+          // 앱이 디바이스 오너인 경우
+          val dpm = context.getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
+          val packageName = context.packageName
+          val adminComponent = ComponentName(packageName, "com.example.kiosk_mode_plus.AdminReceiver")
+          
+          if (dpm.isDeviceOwnerApp(packageName)) {
+            clearDefaultLauncherAsDeviceOwner(context, dpm, adminComponent)
+          } else {
+            clearDefaultLauncher(context)
+          }
+          result.success(true)
+        } catch (e: Exception) {
+          result.error("CLEAR_ERROR", "기본 런처 설정 해제 실패: ${e.message}", null)
+        }
+      }
+      
       else -> {
         result.notImplemented()
       }
     }
-    "setAsDefaultLauncher" -> {
-      try {
-        val forceDialog = call.argument<Boolean>("forceDialog") ?: false
-        val packageManager = context.packageManager
-        val currentPackageName = context.packageName
-        
-        // 현재 기본 홈 앱 확인
-        val intent = Intent(Intent.ACTION_MAIN)
-        intent.addCategory(Intent.CATEGORY_HOME)
-        intent.addCategory(Intent.CATEGORY_DEFAULT)
-        
-        val resolveInfo = packageManager.resolveActivity(intent, PackageManager.MATCH_DEFAULT_ONLY)
-        val currentDefaultLauncher = resolveInfo?.activityInfo?.packageName
-        
-        // 이미 현재 앱이 기본 홈 앱이고 강제 다이얼로그가 아닌 경우 종료
-        if (currentDefaultLauncher == currentPackageName && !forceDialog) {
-          result.success(true)
-          return@setMethodCallHandler
-        }
-        
-        // 홈 선택 다이얼로그 표시
-        val selectIntent = Intent(Intent.ACTION_MAIN)
-        selectIntent.addCategory(Intent.CATEGORY_HOME)
-        selectIntent.addCategory(Intent.CATEGORY_DEFAULT)
-        selectIntent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
-        
-        activity?.startActivity(selectIntent) ?: context.startActivity(selectIntent)
-        result.success(true)
-      } catch (e: Exception) {
-        result.error("SET_LAUNCHER_ERROR", "기본 런처 설정 실패: ${e.message}", null)
+  }
+
+  private fun clearDefaultLauncherAsDeviceOwner(context: Context, dpm: DevicePolicyManager, adminComponent: ComponentName) {
+    try {
+      // 이전에 숨긴 런처 패키지를 다시 표시하기
+      val launcherPackage = "com.android.launcher3" // 기본 런처 패키지명
+      dpm.setApplicationHidden(adminComponent, launcherPackage, false)
+      
+      // 앱 제한 해제
+      if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+        dpm.clearUserRestriction(adminComponent, UserManager.DISALLOW_APPS_CONTROL)
       }
-    } 
-    "clearDefaultLauncher" -> {
-      try {
-        // 앱이 디바이스 오너인 경우
-        val dpm = context.getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
-        val packageName = context.packageName
-        val adminComponent = ComponentName(packageName, "com.example.kiosk_mode_plus.AdminReceiver")
-        
-        if (dpm.isDeviceOwnerApp(packageName)) {
-          clearDefaultLauncherAsDeviceOwner(context)
-        } else {
-          clearDefaultLauncher(context)
-        }
-        result.success(true)
-      } catch (e: Exception) {
-        result.error("CLEAR_ERROR", "기본 런처 설정 해제 실패: ${e.message}", null)
-      }
+      
+      // 이 앱을 LockTask 허용 목록에서 제거
+      dpm.setLockTaskPackages(adminComponent, arrayOf())
+    } catch (e: Exception) {
+      Log.e("KioskMode", "Failed to clear default launcher as device owner: ${e.message}")
+    }
+  }
+
+  private fun clearDefaultLauncher(context: Context) {
+    try {
+      // 기본 런처 설정 화면으로 이동하는 인텐트 생성
+      val intent = Intent(android.provider.Settings.ACTION_HOME_SETTINGS)
+      intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+      context.startActivity(intent)
+    } catch (e: Exception) {
+      Log.e("KioskMode", "Failed to clear default launcher: ${e.message}")
     }
   }
 
@@ -151,10 +186,10 @@ class KioskModePlusPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
     // 액티비티 연결 시 LockTask 패키지 설정 시도
     try {
       val dpm = context.getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
-      val adminComponent = ComponentName(context, AdminReceiver::class.java)
-      val packageName = binding.activity.packageName
+      val packageName = context.packageName
+      val adminComponent = ComponentName(packageName, "com.example.kiosk_mode_plus.AdminReceiver")
       
-      if (dpm.isDeviceOwnerApp(context.packageName)) {
+      if (dpm.isDeviceOwnerApp(packageName)) {
         dpm.setLockTaskPackages(adminComponent, arrayOf(packageName))
       }
     } catch (e: Exception) {
