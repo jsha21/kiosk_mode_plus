@@ -40,6 +40,7 @@ class KioskModePlus {
     }
   }
 
+  /// LockTask 패키지 설정
   static Future<bool> setupLockTaskPackages() async {
     try {
       await _channel.invokeMethod('setupLockTaskPackages');
@@ -50,4 +51,3 @@ class KioskModePlus {
     }
   }
 }
-
