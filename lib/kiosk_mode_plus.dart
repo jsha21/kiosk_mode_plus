@@ -39,5 +39,15 @@ class KioskModePlus {
       return KioskMode.disabled;
     }
   }
+
+  static Future<bool> setupLockTaskPackages() async {
+    try {
+      await _channel.invokeMethod('setupLockTaskPackages');
+      return true;
+    } catch (e) {
+      print('Error setting up lock task packages: $e');
+      return false;
+    }
+  }
 }
 
