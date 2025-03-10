@@ -7,7 +7,7 @@
     <application>
         <activity-alias
             android:name=".LauncherActivity"
-            android:targetActivity=".MainActivity"
+            android:targetActivity="${applicationId}..MainActivity"
             android:exported="true">
             <intent-filter android:priority="1000">
                 <action android:name="android.intent.action.MAIN" />
