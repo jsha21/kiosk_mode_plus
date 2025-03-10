@@ -93,6 +93,7 @@ class KioskModePlusPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
     }
     "setAsDefaultLauncher" -> {
       try {
+        val forceDialog = call.argument<Boolean>("forceDialog") ?: false
         val packageManager = context.packageManager
         val currentPackageName = context.packageName
         
@@ -104,8 +105,8 @@ class KioskModePlusPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
         val resolveInfo = packageManager.resolveActivity(intent, PackageManager.MATCH_DEFAULT_ONLY)
         val currentDefaultLauncher = resolveInfo?.activityInfo?.packageName
         
-        // 이미 현재 앱이 기본 홈 앱인 경우 아무 작업도 하지 않음
-        if (currentDefaultLauncher == currentPackageName) {
+        // 이미 현재 앱이 기본 홈 앱이고 강제 다이얼로그가 아닌 경우 종료
+        if (currentDefaultLauncher == currentPackageName && !forceDialog) {
           result.success(true)
           return@setMethodCallHandler
         }
@@ -121,7 +122,7 @@ class KioskModePlusPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
       } catch (e: Exception) {
         result.error("SET_LAUNCHER_ERROR", "기본 런처 설정 실패: ${e.message}", null)
       }
-} 
+    } 
     "clearDefaultLauncher" -> {
       try {
         // 앱이 디바이스 오너인 경우
