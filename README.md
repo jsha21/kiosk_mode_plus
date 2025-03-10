@@ -38,6 +38,14 @@ adb shell dpm set-device-owner com.example.your_app/com.example.kiosk_mode_plus.
 
 ### 1. 앱 시작 시 자동 활성화
 
+```yaml
+dependencies:
+  custom_plugin:
+    git:
+      url: https://github.com/yourusername/custom_plugin.git
+      ref: main  # 브랜치 또는 태그 지정
+```
+
 앱의 `main.dart` 파일에서 초기화 코드를 추가하면 앱이 시작될 때마다 자동으로 키오스크 모드가 활성화됩니다:
 
 ```dart
