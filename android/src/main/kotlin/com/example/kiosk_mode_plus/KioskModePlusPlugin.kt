@@ -91,6 +91,63 @@ class KioskModePlusPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
         result.notImplemented()
       }
     }
+    "setAsDefaultLauncher" -> {
+      try {
+        // 런처 선택 다이얼로그를 표시하는 방법
+        val packageManager = context.packageManager
+        val componentName = ComponentName(context.packageName, "${context.packageName}.MainActivity")
+        
+        // 컴포넌트 활성화
+        packageManager.setComponentEnabledSetting(
+          componentName,
+          PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
+          PackageManager.DONT_KILL_APP
+        )
+        
+        // 홈 선택 다이얼로그 표시
+        val intent = Intent(Intent.ACTION_MAIN)
+        intent.addCategory(Intent.CATEGORY_HOME)
+        intent.addCategory(Intent.CATEGORY_DEFAULT)
+        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        
+        // 디바이스 오너인 경우 직접 기본값 설정 시도
+        val dpm = context.getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
+        val adminComponent = ComponentName(context.packageName, "com.example.kiosk_mode_plus.AdminReceiver")
+        
+        if (dpm.isDeviceOwnerApp(context.packageName)) {
+          // 기존 런처 비활성화 시도
+          val defaultLauncher = "com.android.launcher3" // 기본 런처 패키지명
+          try {
+            dpm.setApplicationHidden(adminComponent, defaultLauncher, true)
+          } catch (e: Exception) {
+            // 비활성화 실패해도 계속 진행
+          }
+        }
+        
+        // 홈 선택 다이얼로그 표시
+        activity?.startActivity(intent) ?: context.startActivity(intent)
+        result.success(true)
+      } catch (e: Exception) {
+        result.error("SET_LAUNCHER_ERROR", "기본 런처 설정 실패: ${e.message}", null)
+      }
+    }    
+    "clearDefaultLauncher" -> {
+      try {
+        // 앱이 디바이스 오너인 경우
+        val dpm = context.getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
+        val packageName = context.packageName
+        val adminComponent = ComponentName(packageName, "com.example.kiosk_mode_plus.AdminReceiver")
+        
+        if (dpm.isDeviceOwnerApp(packageName)) {
+          clearDefaultLauncherAsDeviceOwner(context)
+        } else {
+          clearDefaultLauncher(context)
+        }
+        result.success(true)
+      } catch (e: Exception) {
+        result.error("CLEAR_ERROR", "기본 런처 설정 해제 실패: ${e.message}", null)
+      }
+    }
   }
 
   override fun onDetachedFromEngine(@NonNull binding: FlutterPlugin.FlutterPluginBinding) {
