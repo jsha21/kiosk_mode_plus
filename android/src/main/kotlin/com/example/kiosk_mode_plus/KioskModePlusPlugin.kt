@@ -33,28 +33,27 @@ class KioskModePlusPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
       "startKioskMode" -> {
         activity?.let {
           try {
-            // 패키지 이름 저장
-            sharedPreferences.edit().putString("last_package", it.packageName).apply()
-            
-            // DevicePolicyManager 가져오기
+            // 정확한 패키지와 컴포넌트 경로 사용
             val dpm = context.getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
-            val adminComponent = ComponentName(context, AdminReceiver::class.java)
+            val packageName = context.packageName // 호스트 앱 패키지 이름
+            val adminComponent = ComponentName(packageName, "com.example.kiosk_mode_plus.AdminReceiver")
             
-            // 관리자 권한 확인
-            if (dpm.isDeviceOwnerApp(context.packageName)) {
-              // LockTask 허용 패키지 설정
-              dpm.setLockTaskPackages(adminComponent, arrayOf(it.packageName))
+            // 앱이 디바이스 오너인지 확인
+            if (dpm.isDeviceOwnerApp(packageName)) {
+              // 여기서 앱을 LockTask 화이트리스트에 추가
+              dpm.setLockTaskPackages(adminComponent, arrayOf(packageName))
               
               // 키오스크 모드 시작
               it.startLockTask()
               result.success(true)
             } else {
-              // 디바이스 오너가 아닌 경우 일반 LockTask 시도
+              // 디바이스 오너가 아닌 경우 일반 스크린 피닝으로 폴백
               it.startLockTask()
               result.success(true)
             }
           } catch (e: Exception) {
-            result.error("KIOSK_ERROR", "키오스크 모드 시작 실패: ${e.message}", null)
+            // 예외 발생 시 디버깅을 위해 자세한 오류 메시지 반환
+            result.error("KIOSK_ERROR", "키오스크 모드 시작 실패: ${e.message}, ${e.stackTrace.joinToString()}", null)
           }
         } ?: result.error("ACTIVITY_NULL", "Activity is null", null)
       }
@@ -68,26 +67,22 @@ class KioskModePlusPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
         val am = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
         result.success(am.isInLockTaskMode)
       }
-      "setLockTaskPackages" -> {
+      "setupLockTaskPackages" -> {
         try {
           val dpm = context.getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
-          val adminComponent = ComponentName(context, AdminReceiver::class.java)
-          val packageName = activity?.packageName ?: context.packageName
+          val packageName = context.packageName
+          val adminComponent = ComponentName(packageName, "com.example.kiosk_mode_plus.AdminReceiver")
           
-          if (dpm.isDeviceOwnerApp(context.packageName)) {
+          if (dpm.isDeviceOwnerApp(packageName)) {
             dpm.setLockTaskPackages(adminComponent, arrayOf(packageName))
             result.success(true)
           } else {
             result.error("NOT_DEVICE_OWNER", "앱이 디바이스 오너가 아닙니다", null)
           }
         } catch (e: Exception) {
-          result.error("LOCK_TASK_ERROR", "LockTask 패키지 설정 실패: ${e.message}", null)
+          result.error("SETUP_ERROR", "LockTask 설정 실패: ${e.message}", null)
         }
       }
-      else -> {
-        result.notImplemented()
-      }
-    }
   }
 
   override fun onDetachedFromEngine(@NonNull binding: FlutterPlugin.FlutterPluginBinding) {
