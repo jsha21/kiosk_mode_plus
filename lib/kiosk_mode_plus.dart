@@ -50,4 +50,26 @@ class KioskModePlus {
       return false;
     }
   }
+
+  /// 앱을 기본 런처로 설정
+  static Future<bool> setAsDefaultLauncher() async {
+    try {
+      await _channel.invokeMethod('setAsDefaultLauncher');
+      return true;
+    } catch (e) {
+      print('기본 런처 설정 오류: $e');
+      return false;
+    }
+  }  
+
+  /// 기본 런처 설정 해제
+  static Future<bool> clearDefaultLauncher() async {
+    try {
+      await _channel.invokeMethod('clearDefaultLauncher');
+      return true;
+    } catch (e) {
+      print('기본 런처 설정 해제 오류: $e');
+      return false;
+    }
+  }
 }
