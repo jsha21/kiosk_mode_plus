@@ -83,6 +83,10 @@ class KioskModePlusPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
           result.error("SETUP_ERROR", "LockTask 설정 실패: ${e.message}", null)
         }
       }
+      else -> {
+        result.notImplemented()
+      }
+    }
   }
 
   override fun onDetachedFromEngine(@NonNull binding: FlutterPlugin.FlutterPluginBinding) {
