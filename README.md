@@ -40,9 +40,9 @@ adb shell dpm set-device-owner com.example.your_app/com.example.kiosk_mode_plus.
 
 ```yaml
 dependencies:
-  custom_plugin:
+  kiosk_mode_plus:
     git:
-      url: https://github.com/yourusername/custom_plugin.git
+      url: https://github.com/yourusername/kiosk_mode_plus.git
       ref: main  # 브랜치 또는 태그 지정
 ```
 
