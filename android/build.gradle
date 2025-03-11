@@ -45,10 +45,6 @@ android {
 
     defaultConfig {
         minSdk = 21
-
-        manifestPlaceholders = [
-                'applicationName': 'io.flutter.app.FlutterApplication',
-        ]
     }
 
     dependencies {

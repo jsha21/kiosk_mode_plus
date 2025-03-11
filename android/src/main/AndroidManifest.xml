@@ -17,12 +17,6 @@
             </intent-filter>
         </activity-alias>
 
-        <!-- 스플래시 화면 설정 -->
-        <meta-data
-            android:name="io.flutter.embedding.android.SplashScreenDrawable"
-            android:resource="@drawable/kiosk_splash_background"
-            tools:replace="android:resource" />
-
         <!-- 자동 부팅 리시버 -->
         <receiver
             android:name=".BootReceiver"
