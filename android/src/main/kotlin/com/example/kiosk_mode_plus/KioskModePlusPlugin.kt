@@ -102,7 +102,7 @@ class KioskModePlusPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
           val dpm = context.getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
           val adminComponent = ComponentName(currentPackageName, "com.example.kiosk_mode_plus.AdminReceiver")
           
-          if (dpm.isDeviceOwnerApp(packageName)) {
+          if (dpm.isDeviceOwnerApp(currentPackageName)) {
             try {
               // 기존 런처 비활성화
               dpm.setApplicationHidden(adminComponent, launcherPackage, true)
