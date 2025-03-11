@@ -15,9 +15,7 @@ class BootReceiver : BroadcastReceiver() {
             
             // 추가 플래그로 앱 시작
             val launchIntent = context.packageManager.getLaunchIntentForPackage(packageName)
-            launchIntent?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or 
-                                  Intent.FLAG_ACTIVITY_CLEAR_TASK or 
-                                  Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED)
+            launchIntent?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             launchIntent?.addCategory(Intent.CATEGORY_HOME)
             launchIntent?.let {
                 context.startActivity(it)
