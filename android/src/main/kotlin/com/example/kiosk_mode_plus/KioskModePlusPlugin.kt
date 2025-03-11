@@ -151,8 +151,9 @@ class KioskModePlusPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
           if (dpm.isDeviceOwnerApp(packageName)) {
             // LauncherActivity 비활성화
             try {
+              val packageManager = context.packageManager
               val launcherComponent = ComponentName(packageName, ".LauncherActivity")
-              dpm.setComponentEnabledSetting(
+              packageManager.setComponentEnabledSetting(
                 launcherComponent,
                 PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
                 PackageManager.DONT_KILL_APP
