@@ -7,7 +7,7 @@
 
     <application>
         <activity-alias
-            android:name=".LauncherActivity"
+            android:name="com.example.kiosk_mode_plus.LauncherActivity"
             android:targetActivity="${applicationId}.MainActivity"
             android:exported="true">
             <intent-filter>
@@ -19,7 +19,7 @@
 
         <!-- 자동 부팅 리시버 -->
         <receiver
-            android:name=".BootReceiver"
+            android:name="com.example.kiosk_mode_plus.BootReceiver"
             android:enabled="true"
             android:exported="true"
             android:directBootAware="true">
@@ -32,7 +32,7 @@
 
         <!-- 관리자 권한 리시버 -->
         <receiver
-            android:name=".AdminReceiver"
+            android:name="com.example.kiosk_mode_plus.AdminReceiver"
             android:permission="android.permission.BIND_DEVICE_ADMIN"
             android:exported="true">
             <meta-data
