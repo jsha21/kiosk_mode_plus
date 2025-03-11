@@ -91,59 +91,81 @@ class KioskModePlusPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
         }
       }
       
-      "setAsDefaultLauncher" -> {
-        try {
-          val forceDialog = call.argument<Boolean>("forceDialog") ?: false
-          val packageManager = context.packageManager
-          val currentPackageName = context.packageName
-          
-          // 현재 기본 홈 앱 확인
-          val intent = Intent(Intent.ACTION_MAIN)
-          intent.addCategory(Intent.CATEGORY_HOME)
-          intent.addCategory(Intent.CATEGORY_DEFAULT)
-          
-          val resolveInfo = packageManager.resolveActivity(intent, PackageManager.MATCH_DEFAULT_ONLY)
-          val currentDefaultLauncher = resolveInfo?.activityInfo?.packageName
-          
-          // 이미 현재 앱이 기본 홈 앱이고 강제 다이얼로그가 아닌 경우 종료
-          if (currentDefaultLauncher == currentPackageName && !forceDialog) {
-            result.success(true)
-            return
+    "setAsDefaultLauncher" -> {
+      try {
+        val forceDialog = call.argument<Boolean>("forceDialog") ?: false
+        val launcherPackage = call.argument<String>("launcherPackage") ?: "com.android.launcher3"
+        val packageManager = context.packageManager
+        val currentPackageName = context.packageName
+        
+        // 디바이스 오너 확인 및 런처 비활성화
+        val dpm = context.getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
+        val adminComponent = ComponentName(packageName, "com.example.kiosk_mode_plus.AdminReceiver")
+        
+        if (dpm.isDeviceOwnerApp(packageName)) {
+          try {
+            // 기존 런처 비활성화
+            dpm.setApplicationHidden(adminComponent, launcherPackage, true)
+            Log.i("KioskMode", "Launcher package $launcherPackage disabled")
+          } catch (e: Exception) {
+            Log.e("KioskMode", "Failed to disable launcher: ${e.message}")
+          }
+        }
+        
+        // 현재 기본 홈 앱 확인
+        val intent = Intent(Intent.ACTION_MAIN)
+        intent.addCategory(Intent.CATEGORY_HOME)
+        intent.addCategory(Intent.CATEGORY_DEFAULT)
+        
+        val resolveInfo = packageManager.resolveActivity(intent, PackageManager.MATCH_DEFAULT_ONLY)
+        val currentDefaultLauncher = resolveInfo?.activityInfo?.packageName
+        
+        // 이미 현재 앱이 기본 홈 앱이고 강제 다이얼로그가 아닌 경우 종료
+        if (currentDefaultLauncher == currentPackageName && !forceDialog) {
+          result.success(true)
+          return
+        }
+        
+        // 홈 선택 다이얼로그 표시
+        val selectIntent = Intent(Intent.ACTION_MAIN)
+        selectIntent.addCategory(Intent.CATEGORY_HOME)
+        selectIntent.addCategory(Intent.CATEGORY_DEFAULT)
+        selectIntent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        
+        activity?.startActivity(selectIntent) ?: context.startActivity(selectIntent)
+        result.success(true)
+      } catch (e: Exception) {
+        result.error("SET_LAUNCHER_ERROR", "기본 런처 설정 실패: ${e.message}", null)
+      }
+    }
+    
+    "clearDefaultLauncher" -> {
+      try {
+        val launcherPackage = call.argument<String>("launcherPackage") ?: "com.android.launcher3"
+        
+        // 디바이스 오너인 경우 기존 런처 활성화
+        val dpm = context.getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
+        val packageName = context.packageName
+        val adminComponent = ComponentName(packageName, "com.example.kiosk_mode_plus.AdminReceiver")
+        
+        if (dpm.isDeviceOwnerApp(packageName)) {
+          // 기존 런처 다시 활성화
+          try {
+            dpm.setApplicationHidden(adminComponent, launcherPackage, false)
+            Log.i("KioskMode", "Launcher package $launcherPackage enabled")
+          } catch (e: Exception) {
+            Log.e("KioskMode", "Failed to enable launcher: ${e.message}")
           }
           
-          // 홈 선택 다이얼로그 표시
-          val selectIntent = Intent(Intent.ACTION_MAIN)
-          selectIntent.addCategory(Intent.CATEGORY_HOME)
-          selectIntent.addCategory(Intent.CATEGORY_DEFAULT)
-          selectIntent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
-          
-          activity?.startActivity(selectIntent) ?: context.startActivity(selectIntent)
-          result.success(true)
-        } catch (e: Exception) {
-          result.error("SET_LAUNCHER_ERROR", "기본 런처 설정 실패: ${e.message}", null)
+          // 추가 제한 해제
+          clearDefaultLauncherAsDeviceOwner(context, dpm, adminComponent)
+        } else {
+          // 일반 접근 방식으로 기본 런처 설정 해제
+          clearDefaultLauncher(context)
         }
-      }
-      
-      "clearDefaultLauncher" -> {
-        try {
-          // 앱이 디바이스 오너인 경우
-          val dpm = context.getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
-          val packageName = context.packageName
-          val adminComponent = ComponentName(packageName, "com.example.kiosk_mode_plus.AdminReceiver")
-          
-          if (dpm.isDeviceOwnerApp(packageName)) {
-            clearDefaultLauncherAsDeviceOwner(context, dpm, adminComponent)
-          } else {
-            clearDefaultLauncher(context)
-          }
-          result.success(true)
-        } catch (e: Exception) {
-          result.error("CLEAR_ERROR", "기본 런처 설정 해제 실패: ${e.message}", null)
-        }
-      }
-      
-      else -> {
-        result.notImplemented()
+        result.success(true)
+      } catch (e: Exception) {
+        result.error("CLEAR_ERROR", "기본 런처 설정 해제 실패: ${e.message}", null)
       }
     }
   }
