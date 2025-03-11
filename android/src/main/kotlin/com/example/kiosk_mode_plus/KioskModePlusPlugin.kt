@@ -198,7 +198,7 @@ class KioskModePlusPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
                   break
                 }
               }
-              
+              /*
               if (launcherActivityComponent != null) {
                 // 이 런처를 바로 실행
                 val launchIntent = Intent(Intent.ACTION_MAIN)
@@ -208,6 +208,7 @@ class KioskModePlusPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
                 context.startActivity(launchIntent)
                 Log.i("KioskMode", "Launched default launcher: $launcherActivityComponent")
               }
+              */
             } catch (e: Exception) {
               Log.e("KioskMode", "Failed to set default launcher: ${e.message}")
             }
