@@ -100,7 +100,7 @@ class KioskModePlusPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
           
           // 디바이스 오너 확인 및 런처 비활성화
           val dpm = context.getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
-          val adminComponent = ComponentName(packageName, "com.example.kiosk_mode_plus.AdminReceiver")
+          val adminComponent = ComponentName(currentPackageName, "com.example.kiosk_mode_plus.AdminReceiver")
           
           if (dpm.isDeviceOwnerApp(packageName)) {
             try {
