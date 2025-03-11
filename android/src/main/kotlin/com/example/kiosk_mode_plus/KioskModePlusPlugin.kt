@@ -179,20 +179,6 @@ class KioskModePlusPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
             } catch (e: Exception) {
               Log.e("KioskMode", "Failed to clear preferred activities: ${e.message}")
             }
-            
-            // 기존 런처 실행
-            try {
-              val packageManager = context.packageManager
-              val launchIntent = packageManager.getLaunchIntentForPackage(launcherPackage)
-              if (launchIntent != null) {
-                launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                launchIntent.addCategory(Intent.CATEGORY_HOME)
-                context.startActivity(launchIntent)
-                Log.i("KioskMode", "Started launcher $launcherPackage")
-              }
-            } catch (e: Exception) {
-              Log.e("KioskMode", "Failed to start launcher: ${e.message}")
-            }
           } else {
             // 일반 접근 방식으로 기본 런처 설정 해제
             clearDefaultLauncher(context)
