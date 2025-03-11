@@ -149,10 +149,18 @@ class KioskModePlusPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
           val adminComponent = ComponentName(packageName, "com.example.kiosk_mode_plus.AdminReceiver")
           
           if (dpm.isDeviceOwnerApp(packageName)) {
-            // LauncherActivity 비활성화
+            // 기존 런처 다시 활성화
+            try {
+              dpm.setApplicationHidden(adminComponent, launcherPackage, false)
+              Log.i("KioskMode", "Launcher package $launcherPackage enabled")
+            } catch (e: Exception) {
+              Log.e("KioskMode", "Failed to enable launcher: ${e.message}")
+            }
+            
+            // LauncherActivity 비활성화 (이렇게 하면 홈 이벤트를 수신하지 않음)
             try {
               val packageManager = context.packageManager
-              val launcherComponent = ComponentName(packageName, ".LauncherActivity")
+              val launcherComponent = ComponentName(packageName, "com.example.kiosk_mode_plus.LauncherActivity")
               packageManager.setComponentEnabledSetting(
                 launcherComponent,
                 PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
@@ -163,21 +171,45 @@ class KioskModePlusPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
               Log.e("KioskMode", "Failed to disable launcher activity: ${e.message}")
             }
             
-            // 기존 런처 다시 활성화
+            // 홈 화면 설정 초기화 (선택기)
             try {
-              dpm.setApplicationHidden(adminComponent, launcherPackage, false)
-              Log.i("KioskMode", "Launcher package $launcherPackage enabled")
-              
-              // 기존 런처의 HomeActivity 활성화 및 최상위로 실행
               val packageManager = context.packageManager
-              val launcherIntent = packageManager.getLaunchIntentForPackage(launcherPackage)
-              if (launcherIntent != null) {
-                launcherIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                launcherIntent.addCategory(Intent.CATEGORY_HOME)
-                context.startActivity(launcherIntent)
+              packageManager.clearPackagePreferredActivities(packageName)
+              Log.i("KioskMode", "Cleared preferred activities")
+            } catch (e: Exception) {
+              Log.e("KioskMode", "Failed to clear preferred activities: ${e.message}")
+            }
+            
+            // 기존 런처를 홈 앱으로 직접 설정 (Device Owner 권한 필요)
+            try {
+              // 기존 런처의 홈 액티비티 컴포넌트 찾기
+              val packageManager = context.packageManager
+              val intent = Intent(Intent.ACTION_MAIN)
+              intent.addCategory(Intent.CATEGORY_HOME)
+              val resolveInfoList = packageManager.queryIntentActivities(intent, 0)
+              
+              var launcherActivityComponent: ComponentName? = null
+              for (resolveInfo in resolveInfoList) {
+                if (resolveInfo.activityInfo.packageName == launcherPackage) {
+                  launcherActivityComponent = ComponentName(
+                    resolveInfo.activityInfo.packageName,
+                    resolveInfo.activityInfo.name
+                  )
+                  break
+                }
+              }
+              
+              if (launcherActivityComponent != null) {
+                // 이 런처를 바로 실행
+                val launchIntent = Intent(Intent.ACTION_MAIN)
+                launchIntent.addCategory(Intent.CATEGORY_HOME)
+                launchIntent.setComponent(launcherActivityComponent)
+                launchIntent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                context.startActivity(launchIntent)
+                Log.i("KioskMode", "Launched default launcher: $launcherActivityComponent")
               }
             } catch (e: Exception) {
-              Log.e("KioskMode", "Failed to enable launcher: ${e.message}")
+              Log.e("KioskMode", "Failed to set default launcher: ${e.message}")
             }
             
             // 추가 제한 해제
