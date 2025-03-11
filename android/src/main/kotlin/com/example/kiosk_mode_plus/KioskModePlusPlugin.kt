@@ -171,7 +171,7 @@ class KioskModePlusPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
               Log.e("KioskMode", "Failed to disable launcher activity: ${e.message}")
             }
             
-            // 홈 화면 설정 초기화 (선택기)
+            // 홈 화면 설정 초기화
             try {
               val packageManager = context.packageManager
               packageManager.clearPackagePreferredActivities(packageName)
@@ -180,41 +180,19 @@ class KioskModePlusPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
               Log.e("KioskMode", "Failed to clear preferred activities: ${e.message}")
             }
             
-            // 기존 런처를 홈 앱으로 직접 설정 (Device Owner 권한 필요)
+            // 기존 런처 실행
             try {
-              // 기존 런처의 홈 액티비티 컴포넌트 찾기
               val packageManager = context.packageManager
-              val intent = Intent(Intent.ACTION_MAIN)
-              intent.addCategory(Intent.CATEGORY_HOME)
-              val resolveInfoList = packageManager.queryIntentActivities(intent, 0)
-              
-              var launcherActivityComponent: ComponentName? = null
-              for (resolveInfo in resolveInfoList) {
-                if (resolveInfo.activityInfo.packageName == launcherPackage) {
-                  launcherActivityComponent = ComponentName(
-                    resolveInfo.activityInfo.packageName,
-                    resolveInfo.activityInfo.name
-                  )
-                  break
-                }
-              }
-              
-              if (launcherActivityComponent != null) {
-                // 이 런처를 바로 실행
-                val launchIntent = Intent(Intent.ACTION_MAIN)
+              val launchIntent = packageManager.getLaunchIntentForPackage(launcherPackage)
+              if (launchIntent != null) {
+                launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 launchIntent.addCategory(Intent.CATEGORY_HOME)
-                launchIntent.setComponent(launcherActivityComponent)
-                launchIntent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
                 context.startActivity(launchIntent)
-                Log.i("KioskMode", "Launched default launcher: $launcherActivityComponent")
+                Log.i("KioskMode", "Started launcher $launcherPackage")
               }
-              
             } catch (e: Exception) {
-              Log.e("KioskMode", "Failed to set default launcher: ${e.message}")
+              Log.e("KioskMode", "Failed to start launcher: ${e.message}")
             }
-            
-            // 추가 제한 해제
-            clearDefaultLauncherAsDeviceOwner(context, dpm, adminComponent)
           } else {
             // 일반 접근 방식으로 기본 런처 설정 해제
             clearDefaultLauncher(context)
