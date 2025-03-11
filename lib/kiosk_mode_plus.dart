@@ -51,22 +51,30 @@ class KioskModePlus {
     }
   }
 
-  /// 앱을 기본 런처로 설정 (forceDialog: 이미 기본 런처인 경우에도 다이얼로그 표시 여부)
-  static Future<bool> setAsDefaultLauncher({bool forceDialog = false}) async {
+  /// 앱을 기본 런처로 설정
+  static Future<bool> setAsDefaultLauncher({
+    bool forceDialog = false,
+    String? launcherPackage,
+  }) async {
     try {
-      await _channel.invokeMethod('setAsDefaultLauncher', {'forceDialog': forceDialog});
-      return true;
+      return await _channel.invokeMethod('setAsDefaultLauncher', {
+        'forceDialog': forceDialog,
+        'launcherPackage': launcherPackage ?? 'com.android.launcher3',
+      }) ?? false;
     } catch (e) {
       print('기본 런처 설정 오류: $e');
       return false;
     }
-  } 
-
+  }
+  
   /// 기본 런처 설정 해제
-  static Future<bool> clearDefaultLauncher() async {
+  static Future<bool> clearDefaultLauncher({
+    String? launcherPackage,
+  }) async {
     try {
-      await _channel.invokeMethod('clearDefaultLauncher');
-      return true;
+      return await _channel.invokeMethod('clearDefaultLauncher', {
+        'launcherPackage': launcherPackage ?? 'com.android.launcher3',
+      }) ?? false;
     } catch (e) {
       print('기본 런처 설정 해제 오류: $e');
       return false;
