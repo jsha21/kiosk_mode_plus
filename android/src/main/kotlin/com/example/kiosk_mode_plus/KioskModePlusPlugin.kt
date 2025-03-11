@@ -149,10 +149,32 @@ class KioskModePlusPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
           val adminComponent = ComponentName(packageName, "com.example.kiosk_mode_plus.AdminReceiver")
           
           if (dpm.isDeviceOwnerApp(packageName)) {
+            // LauncherActivity 비활성화
+            try {
+              val launcherComponent = ComponentName(packageName, ".LauncherActivity")
+              dpm.setComponentEnabledSetting(
+                launcherComponent,
+                PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+                PackageManager.DONT_KILL_APP
+              )
+              Log.i("KioskMode", "Launcher activity disabled")
+            } catch (e: Exception) {
+              Log.e("KioskMode", "Failed to disable launcher activity: ${e.message}")
+            }
+            
             // 기존 런처 다시 활성화
             try {
               dpm.setApplicationHidden(adminComponent, launcherPackage, false)
               Log.i("KioskMode", "Launcher package $launcherPackage enabled")
+              
+              // 기존 런처의 HomeActivity 활성화 및 최상위로 실행
+              val packageManager = context.packageManager
+              val launcherIntent = packageManager.getLaunchIntentForPackage(launcherPackage)
+              if (launcherIntent != null) {
+                launcherIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                launcherIntent.addCategory(Intent.CATEGORY_HOME)
+                context.startActivity(launcherIntent)
+              }
             } catch (e: Exception) {
               Log.e("KioskMode", "Failed to enable launcher: ${e.message}")
             }
